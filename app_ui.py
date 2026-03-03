@@ -7,9 +7,6 @@ from app.retrieval.vectorstore import create_vector_store
 from app.rag_pipeline import answer_question
 
 
-# -----------------------------
-# PDF Processing
-# -----------------------------
 def process_pdf(file):
     if not file:
         return "⚠ Please upload a PDF file first.", False, ""
@@ -30,9 +27,6 @@ def process_pdf(file):
         return f"🔴 Error: {str(e)}", False, ""
 
 
-# -----------------------------
-# Chat Function
-# -----------------------------
 def chat_function(message, history, provider, is_vector_ready, db_path):
     if not is_vector_ready or not db_path:
         return "⚠ Please upload and process a document first."
@@ -43,9 +37,6 @@ def chat_function(message, history, provider, is_vector_ready, db_path):
         return f"🔴 Error: {str(e)}"
 
 
-# -----------------------------
-# UI Layout
-# -----------------------------
 with gr.Blocks(theme=gr.themes.Base(primary_hue="blue")) as demo:
 
     vector_ready_state = gr.State(False)
@@ -56,7 +47,6 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="blue")) as demo:
 
     with gr.Row():
 
-        # Sidebar
         with gr.Column(scale=1):
             gr.Markdown("### 📄 Document Setup")
 
@@ -73,7 +63,6 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="blue")) as demo:
                 label="LLM Provider",
             )
 
-        # Chat Area
         with gr.Column(scale=2):
             gr.Markdown("### 💬 Ask Questions")
 
@@ -86,11 +75,14 @@ with gr.Blocks(theme=gr.themes.Base(primary_hue="blue")) as demo:
                 ],
             )
 
+    def wrapped_process(file):
+        result = process_pdf(file)
+        return result
+
     process_btn.click(
-        fn=process_pdf,
+        fn=wrapped_process,
         inputs=pdf_input,
         outputs=[status, vector_ready_state, db_path_state],
     )
-
 
 demo.launch(css="footer {display:none;}")
