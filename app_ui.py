@@ -11,23 +11,22 @@ from app.rag_pipeline import answer_question
 # PDF Processing
 # -----------------------------
 def process_pdf(file):
+    if not file:
+        return "⚠ Please upload a PDF file first.", False, ""
+
     try:
-        # إنشاء اسم مجلد فريد لهذه الجلسة
         session_id = uuid.uuid4().hex
-        db_path = f"chroma_sessions/db_{session_id}"
-        
-        # التأكد من وجود المجلد الرئيسي
-        os.makedirs("chroma_sessions", exist_ok=True)
+        base_dir = "chroma_sessions"
+        db_path = os.path.join(base_dir, f"db_{session_id}")
+
+        os.makedirs(base_dir, exist_ok=True)
 
         chunks = load_and_split_pdf(file.name)
-        # نمرر المسار الجديد
         create_vector_store(chunks, db_path)
 
-        # نرجع: رسالة النجاح، حالة الجاهزية (True)، ومسار قاعدة البيانات
         return "🟢 Document processed successfully.", True, db_path
 
     except Exception as e:
-        # في حال الخطأ نرجع: رسالة الخطأ، الجاهزية (False)، ومسار فارغ
         return f"🔴 Error: {str(e)}", False, ""
 
 
@@ -39,19 +38,17 @@ def chat_function(message, history, provider, is_vector_ready, db_path):
         return "⚠ Please upload and process a document first."
 
     try:
-        # نمرر db_path للدالة
         return answer_question(message, history, provider, db_path)
     except Exception as e:
-        return f"Error: {str(e)}"
+        return f"🔴 Error: {str(e)}"
 
 
 # -----------------------------
 # UI Layout
 # -----------------------------
-with gr.Blocks() as demo:
-    
+with gr.Blocks(theme=gr.themes.Base(primary_hue="blue")) as demo:
+
     vector_ready_state = gr.State(False)
-    # State جديد لحفظ مسار قاعدة البيانات الخاص بالمستخدم
     db_path_state = gr.State("")
 
     gr.Markdown("## 🚀 Intelligent Document RAG System")
@@ -73,7 +70,7 @@ with gr.Blocks() as demo:
             provider_dropdown = gr.Dropdown(
                 choices=["Groq", "OpenRouter"],
                 value="Groq",
-                label="LLM Provider"
+                label="LLM Provider",
             )
 
         # Chat Area
@@ -83,20 +80,17 @@ with gr.Blocks() as demo:
             chatbot = gr.ChatInterface(
                 fn=chat_function,
                 additional_inputs=[
-                    provider_dropdown, 
-                    vector_ready_state, 
-                    db_path_state # تمرير الـ State للمحادثة
-                ]
+                    provider_dropdown,
+                    vector_ready_state,
+                    db_path_state,
+                ],
             )
 
-    # عند المعالجة، نحدث 3 أشياء: النص، حالة الجاهزية، ومسار الـ DB
     process_btn.click(
-        fn=process_pdf, 
-        inputs=pdf_input, 
-        outputs=[status, vector_ready_state, db_path_state]
+        fn=process_pdf,
+        inputs=pdf_input,
+        outputs=[status, vector_ready_state, db_path_state],
     )
 
-demo.launch(
-    theme=gr.themes.Base(primary_hue="blue"),
-    css="footer {display:none;}"
-)
+
+demo.launch(css="footer {display:none;}")

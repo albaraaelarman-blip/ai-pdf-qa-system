@@ -1,53 +1,71 @@
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+
 from app.retrieval.vectorstore import load_vector_store
 from app.llm.llm_factory import get_llm
 
-def answer_question(query: str, history: list, provider: str, db_path: str):
 
+def answer_question(query: str, history: list, provider: str, db_path: str):
     vectorstore = load_vector_store(db_path)
 
     retriever = vectorstore.as_retriever(
         search_type="mmr",
-        search_kwargs={
-            "k": 6,
-            "fetch_k": 15
-        }
+        search_kwargs={"k": 6, "fetch_k": 15},
     )
 
-    docs = retriever.invoke(query)
-    context = "\n\n".join([doc.page_content for doc in docs])
-
-    formatted_history = ""
-    for item in history:
-
-        if isinstance(item, dict):
-            role = "Human" if item.get("role") == "user" else "AI"
-            formatted_history += f"{role}: {item.get('content')}\n"
-            
-
-        elif isinstance(item, (list, tuple)) and len(item) >= 2:
-            formatted_history += f"Human: {item[0]}\nAI: {item[1]}\n"
     llm = get_llm(provider)
 
-    prompt = f"""
-You are an expert, highly precise AI assistant. Your task is to answer the user's question based strictly on the provided context.
+    prompt = ChatPromptTemplate.from_template(
+        """
+You are an expert, highly precise AI assistant.
+Answer strictly based on the provided context.
 
-STRICT INSTRUCTIONS:
-1. Answer directly and concisely. DO NOT use introductory phrases like "Based on the context," "Here is the answer," or "The context says."
-2. If the user's query is incomplete, grammatically incorrect, or short (e.g., "what ai"), infer their intent and provide the answer directly without commenting on their grammar or the phrasing of the question.
-3. Use ONLY the provided context. Do not use outside knowledge.
-4. If the exact answer is not found in the context, reply EXACTLY with: "I don't know based on the document." Do not try to guess.
+RULES:
+- Answer directly and concisely.
+- Use ONLY the provided context.
+- If the answer is not found, reply EXACTLY with:
+"I don't know based on the document."
 
 CHAT HISTORY:
-{formatted_history}
+{history}
 
 CONTEXT:
 {context}
 
 QUESTION:
-{query}
-
-ANSWER:
+{question}
 """
+    )
 
-    response = llm.invoke(prompt)
-    return response.content
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
+
+    formatted_history = format_history(history)
+
+    rag_chain = (
+        {
+            "context": retriever | format_docs,
+            "question": RunnablePassthrough(),
+            "history": lambda _: formatted_history,
+        }
+        | prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    return rag_chain.invoke(query)
+
+
+def format_history(history: list) -> str:
+    formatted = []
+
+    for item in history:
+        if isinstance(item, dict):
+            role = "Human" if item.get("role") == "user" else "AI"
+            formatted.append(f"{role}: {item.get('content')}")
+        elif isinstance(item, (list, tuple)) and len(item) >= 2:
+            formatted.append(f"Human: {item[0]}")
+            formatted.append(f"AI: {item[1]}")
+
+    return "\n".join(formatted)
