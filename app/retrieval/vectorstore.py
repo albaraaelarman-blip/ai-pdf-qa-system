@@ -6,14 +6,14 @@ from langchain_openai import OpenAIEmbeddings
 COLLECTION_NAME = "rag_collection"
 
 def get_embeddings():
-    # تحميل مفتاح OpenRouter من ملفك الجاهز
+
     load_dotenv(".env.openrouter")
     
-    # استخدام OpenRouter لعمل الـ Embeddings
+
     return OpenAIEmbeddings(
         base_url="https://openrouter.ai/api/v1",
         api_key=os.getenv("OPENROUTER_API_KEY"),
-        # يمكنك تغيير النموذج لأي نموذج Embeddings مدعوم في OpenRouter
+
         model="openai/text-embedding-3-small" 
     )
 

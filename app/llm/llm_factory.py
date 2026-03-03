@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 
-# ✅ يتحمل مرة واحدة بس عند تشغيل البرنامج
+
 load_dotenv(".env.groq")
 load_dotenv(".env.openrouter")
 

@@ -2,7 +2,7 @@ from app.retrieval.vectorstore import load_vector_store
 from app.llm.llm_factory import get_llm
 
 def answer_question(query: str, history: list, provider: str, db_path: str):
-    # تمرير المسار الديناميكي
+
     vectorstore = load_vector_store(db_path)
 
     retriever = vectorstore.as_retriever(
@@ -18,12 +18,12 @@ def answer_question(query: str, history: list, provider: str, db_path: str):
 
     formatted_history = ""
     for item in history:
-        # إذا كان الإصدار حديثاً ويرسل البيانات كـ Dictionary
+
         if isinstance(item, dict):
             role = "Human" if item.get("role") == "user" else "AI"
             formatted_history += f"{role}: {item.get('content')}\n"
             
-        # إذا كان الإصدار يرسل البيانات كقائمة (List/Tuple)
+
         elif isinstance(item, (list, tuple)) and len(item) >= 2:
             formatted_history += f"Human: {item[0]}\nAI: {item[1]}\n"
     llm = get_llm(provider)
