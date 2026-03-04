@@ -44,7 +44,7 @@ The application follows a modular RAG architecture:
 ## How to Run the Project
 
 1. Create a virtual environment:
-   python -m venv venv
+   py -3.10 -m venv venv
 
 2. Activate it (Windows):
    venv\Scripts\activate
